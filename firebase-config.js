@@ -16,16 +16,16 @@
 
    5. Replace the null below with your copied config, e.g.:
 
-        window.FIREBASE_CONFIG = {
-          apiKey: "AIzaSyCBtUOh1TYktHt6O1EXBFwD85q8XCwHRMw",
-          authDomain: "gre-vocab-19986.firebaseapp.com",
-          projectId: "gre-vocab-19986",
-          storageBucket: "gre-vocab-19986.firebasestorage.app",
-          messagingSenderId: "576522306773",
-          appId: "1:576522306773:web:1c3441b49786f62b158e5c"
-      };
+       window.FIREBASE_CONFIG = null
 
    These keys are safe to be public. Then on each device open the site, go to
    Stats → Cloud sync, and enter the SAME sync code to sync automatically.
    ─────────────────────────────────────────────────────────────────────────── */
-window.FIREBASE_CONFIG = null;
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCBtUOh1TYktHt6O1EXBFwD85q8XCwHRMw",
+  authDomain: "gre-vocab-19986.firebaseapp.com",
+  projectId: "gre-vocab-19986",
+  storageBucket: "gre-vocab-19986.firebasestorage.app",
+  messagingSenderId: "576522306773",
+  appId: "1:576522306773:web:1c3441b49786f62b158e5c"
+};
