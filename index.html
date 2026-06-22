@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GRE Vocab Trainer</title>
+<script src="data/vocab_full.js"></script>
+<script src="data/vocab_ref.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+:root{
+  --bg:#0f1220; --panel:#171a2b; --panel2:#1f2338; --ink:#e8eaf2; --muted:#9aa0b8;
+  --line:#2a2f48; --accent:#6c8cff; --accent2:#8a6dff; --good:#37c978; --warn:#ffb454;
+  --bad:#ff6b6b; --easy:#4fb0ff; --chip:#23284a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:linear-gradient(180deg,#0d1020,#0f1220 40%);color:var(--ink);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang TC","Microsoft JhengHei",sans-serif;}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:18px 18px 80px}
+header{display:flex;align-items:center;gap:12px;padding:6px 2px 16px}
+header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}
+header .sub{color:var(--muted);font-size:12.5px}
+.spacer{flex:1}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:9px 14px;font-size:14px;
+  font-weight:600;cursor:pointer;transition:.12s}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:default}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+.grid{display:grid;gap:14px}
+.tiles{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;transition:.12s}
+.tile:hover{border-color:var(--accent);transform:translateY(-1px)}
+.tile .t{font-weight:700;font-size:15px;margin-bottom:6px}
+.tile .d{color:var(--muted);font-size:13px}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin:2px 0 16px}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-width:96px}
+.kpi b{display:block;font-size:22px;line-height:1.1}
+.kpi span{color:var(--muted);font-size:12px}
+.kpi.new b{color:var(--accent)} .kpi.due b{color:var(--good)} .kpi.learn b{color:var(--warn)}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+nav.tabs button{background:transparent;color:var(--muted);border:1px solid transparent;border-radius:10px;
+  padding:7px 12px;font-size:13.5px;font-weight:600;cursor:pointer}
+nav.tabs button.on{color:var(--ink);background:var(--panel);border-color:var(--line)}
+/* study */
+.study{max-width:680px;margin:0 auto}
+.flash{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:34px 26px;min-height:230px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.flash .word{font-size:38px;font-weight:800;letter-spacing:.3px}
+.flash .pos{color:var(--muted);font-style:italic;margin-top:6px}
+.flash .hint{color:var(--muted);font-size:13px;margin-top:18px}
+.back{width:100%;text-align:left;margin-top:6px}
+.back .def{font-size:20px;font-weight:700;margin:2px 0 12px;text-align:center}
+.row{margin:10px 0}
+.row .lab{display:inline-block;min-width:54px;color:var(--muted);font-size:12px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;vertical-align:top}
+.chips{display:inline-flex;gap:6px;flex-wrap:wrap;vertical-align:top}
+.chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px}
+.chip.syn{color:#bfe9cf} .chip.ant{color:#ffc9c9}
+.chip.link{cursor:pointer} .chip.link:hover{border-color:var(--accent)}
+.box{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
+.box .k{color:var(--muted);font-size:12px;font-weight:700;margin-bottom:3px}
+.eg{color:#cfd4ee}.eg .zh{color:var(--muted);font-size:13px;margin-top:3px}
+.rate{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.rate button{border:0;border-radius:11px;padding:12px 6px;font-weight:700;cursor:pointer;color:#08101f}
+.rate .again{background:var(--bad)} .rate .hard{background:var(--warn)}
+.rate .good{background:var(--good)} .rate .easy{background:var(--easy)}
+.rate small{display:block;font-weight:600;opacity:.8;font-size:11px}
+.reveal{margin-top:16px}
+.reveal button{width:100%;background:var(--accent);color:#fff;border:0;border-radius:11px;padding:13px;font-weight:700;font-size:15px;cursor:pointer}
+.freq{color:var(--warn);letter-spacing:1px}
+.muted{color:var(--muted)}
+.list .it{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.list .it:hover{background:var(--panel2)}
+.list .it .w{font-weight:700;min-width:150px}
+.list .it .g{color:var(--muted);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.search{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:14px}
+.progress{height:6px;background:var(--panel2);border-radius:6px;overflow:hidden;margin:4px 0 14px}
+.progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.center{text-align:center}
+.dlg-back{position:fixed;inset:0;background:rgba(4,6,14,.6);display:flex;align-items:center;justify-content:center;z-index:50}
+.dlg{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;max-width:440px;width:90%}
+.dlg h3{margin:0 0 8px}.dlg p{color:var(--muted)}
+.dlg .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111527;border:1px solid var(--line);
+  color:var(--ink);padding:10px 16px;border-radius:10px;z-index:60;opacity:0;transition:.2s}
+.toast.on{opacity:1}
+.small{font-size:12.5px}
+.tag{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:11px;color:var(--muted)}
+html{-webkit-text-size-adjust:100%}
+*{-webkit-tap-highlight-color:rgba(108,140,255,.25)}
+button,.tile,.chip,.it,.opt,.spk{touch-action:manipulation}
+.spk{cursor:pointer;font-size:.62em;opacity:.75;vertical-align:middle;user-select:none}
+.spk:hover{opacity:1}
+#qopts .opt{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:11px;padding:13px 14px;margin:8px 0;cursor:pointer;font-size:15px}
+#qopts .opt:hover{border-color:var(--accent)}
+#qopts .opt.correct{background:rgba(55,201,120,.22);border-color:var(--good)}
+#qopts .opt.wrong{background:rgba(255,107,107,.22);border-color:var(--bad)}
+#qopts .opt:disabled{cursor:default;opacity:.96}
+@media (max-width:600px){
+  .wrap{padding:12px 11px 92px}
+  header{gap:8px;padding-bottom:12px}
+  header h1{font-size:16px}
+  header .sub{display:none}
+  .flash{padding:24px 14px;min-height:168px}
+  .flash .word{font-size:30px}
+  .back .def{font-size:18px}
+  .tiles{grid-template-columns:1fr}
+  .kpi{min-width:0;flex:1 1 28%}
+  .kpi b{font-size:19px}
+  .rate{gap:6px}
+  .rate button{padding:15px 3px}
+  nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:4px}
+  nav.tabs button{white-space:nowrap;flex:0 0 auto}
+  .dlg{width:94%;max-height:86vh;overflow:auto}
+  .list .it .w{min-width:96px}
+  .row .lab{min-width:42px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📚 GRE Vocab Trainer</h1>
+    <div class="sub" id="hsub"></div>
+    <div class="spacer"></div>
+    <button class="btn ghost sm" id="nav-home">Home</button>
+  </header>
+  <nav class="tabs" id="tabs"></nav>
+  <main id="app"></main>
+</div>
+<div id="dlg-root"></div>
+<div class="toast" id="toast"></div>
+<script>
+/* ============ data ============ */
+const WORDS = window.VOCAB_FULL || {};
+const CLUSTERS = window.VOCAB_CLUSTERS || [];
+const ROOTS = window.VOCAB_ROOTS || [];
+const WORDLIST = Object.keys(WORDS);
+const REF = window.VOCAB_REF || {};
+const LOOK = Object.assign({}, REF, WORDS);   // every referenced word resolvable (deck overrides ref)
+const LS_KEY = 'gre_vocab_v1';
+/* pronunciation via the offline Web Speech API */
+let _voice=null;
+function pickVoice(){ try{ const vs=window.speechSynthesis.getVoices()||[]; _voice = vs.find(v=>/en[-_]US/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || vs[0] || null; }catch(e){} }
+if('speechSynthesis' in window){ pickVoice(); try{ window.speechSynthesis.onvoiceschanged=pickVoice; }catch(e){} }
+function speak(w){ try{ if(!('speechSynthesis' in window)||!w) return; const u=new SpeechSynthesisUtterance(String(w)); u.lang=(_voice&&_voice.lang)||'en-US'; if(_voice) u.voice=_voice; u.rate=.92; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }catch(e){} }
+function bindSpeak(root){ (root||document).querySelectorAll('[data-speak]').forEach(el=>el.onclick=(ev)=>{ ev.stopPropagation(); speak(el.dataset.speak); }); }
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function uid(){ return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8); }
+function today(){ return Math.floor(Date.now()/86400000); }
+
+/* ============ db ============ */
+function freshDB(){ return { cards:{}, settings:{newPerDay:200, maxReviews:2000, autoSpeak:true}, day:{d:today(),newDone:0,revDone:0},
+  streak:{last:0,count:0}, _syncTs:0 }; }
+function normalizeDB(d){
+  if(!d || typeof d!=='object') return freshDB();
+  const f=freshDB();
+  d.cards = (d.cards&&typeof d.cards==='object')?d.cards:{};
+  d.settings = Object.assign({}, f.settings, d.settings||{});
+  d.day = d.day&&typeof d.day==='object'?d.day:f.day;
+  d.streak = d.streak||f.streak;
+  return d;
+}
+function loadDB(){ try{ const r=localStorage.getItem(LS_KEY); return normalizeDB(r?JSON.parse(r):null); }catch(e){ return freshDB(); } }
+function saveDB(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(db)); }catch(e){ console.warn('save failed',e); } scheduleSyncWrite(); scheduleCloudWrite(); }
+function storageWorks(){ try{ const k='__greVtest'; localStorage.setItem(k,'1'); const ok=localStorage.getItem(k)==='1'; localStorage.removeItem(k); return ok; }catch(e){ return false; } }
+let db = loadDB();
+// brand-new / empty install -> honor the 200-words-a-day target
+if(!Object.keys(db.cards).length && db.settings.newPerDay===20){ db.settings.newPerDay=200; db.settings.maxReviews=Math.max(db.settings.maxReviews||0,2000); }
+function rollDay(){ const t=today(); if(db.day.d!==t){ db.day={d:t,newDone:0,revDone:0}; saveDB(); } }
+rollDay();
+
+/* ============ SRS (SM-2 flavored) ============ */
+const MAX_IVL = 365*3;
+function ensureCard(w){ let c=db.cards[w]; if(!c){ c=db.cards[w]={state:'new',due:today(),ivl:0,ease:2.5,reps:0,lapses:0,last:0}; } return c; }
+function grade(w, r){ // r: again|hard|good|easy
+  const c=ensureCard(w), wasReview=(c.state==='review');
+  if(r==='again'){ if(wasReview) c.lapses++; c.ease=Math.max(1.3,c.ease-0.2); c.ivl=0; c.due=today(); c.state='learning'; }
+  else if(r==='hard'){ c.ease=Math.max(1.3,c.ease-0.15); c.ivl=c.ivl?Math.max(1,Math.round(c.ivl*1.2)):1; c.due=today()+c.ivl; c.reps++; c.state='review'; }
+  else if(r==='good'){ c.ivl=c.ivl?Math.round(c.ivl*c.ease):1; c.due=today()+Math.min(c.ivl,MAX_IVL); c.reps++; c.state='review'; }
+  else if(r==='easy'){ c.ivl=c.ivl?Math.round(c.ivl*c.ease*1.3):4; c.ease+=0.15; c.due=today()+Math.min(c.ivl,MAX_IVL); c.reps++; c.state='review'; }
+  c.ivl=Math.min(c.ivl,MAX_IVL); c.last=Date.now();
+  // streak
+  const t=today(); if(db.streak.last!==t){ db.streak.count=(db.streak.last===t-1?db.streak.count+1:1); db.streak.last=t; }
+  saveDB();
+}
+// counts over a deck (array of words). default = whole bank
+function deckStats(deck){
+  const t=today(); let dueN=0, learn=0, fresh=0, total=deck.length, mastered=0;
+  deck.forEach(w=>{ const c=db.cards[w];
+    if(!c){ fresh++; }
+    else { if(c.state==='learning'){ learn++; } if(c.state==='review'){ if(c.due<=t) dueN++; if(c.ivl>=21) mastered++; } if(c.due<=t&&c.state==='learning') dueN++; } });
+  return {dueN,learn,fresh,total,mastered};
+}
+function buildQueue(deck){
+  const t=today();
+  const reviews=[], news=[];
+  deck.forEach(w=>{ const c=db.cards[w];
+    if(!c) news.push(w);
+    else if(c.state!=='new' && c.due<=t) reviews.push(w); });
+  reviews.sort((a,b)=>(db.cards[a].due-db.cards[b].due));
+  // shuffle new lightly (keep cluster grouping stable enough) — by frequency desc so high-yield first
+  news.sort((a,b)=>((WORDS[b].freq||0)-(WORDS[a].freq||0)));
+  const revRoom=Math.max(0, db.settings.maxReviews - db.day.revDone);
+  const newRoom=Math.max(0, db.settings.newPerDay - db.day.newDone);
+  const q=[];
+  reviews.slice(0,revRoom).forEach(w=>q.push({w,isNew:false}));
+  news.slice(0,newRoom).forEach(w=>q.push({w,isNew:true}));
+  // interleave new into reviews
+  for(let i=q.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [q[i],q[j]]=[q[j],q[i]]; }
+  return q;
+}
+
+/* ============ views ============ */
+const app=()=>document.getElementById('app');
+let view='home', session=null;
+function setTabs(){
+  const tabs=[['home','🏠 Home'],['study','🎴 Study'],['quiz','📝 Quiz'],['clusters','🧲 字群 Clusters'],['roots','🌱 字根 Roots'],['browse','🔎 Browse'],['stats','📊 Stats']];
+  document.getElementById('tabs').innerHTML=tabs.map(([k,l])=>`<button data-v="${k}" class="${view===k?'on':''}">${l}</button>`).join('');
+  document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>go(b.dataset.v));
+}
+function go(v){ view=v; session=null; setTabs(); render(); window.scrollTo(0,0); }
+document.getElementById('nav-home').onclick=()=>go('home');
+
+function render(){
+  rollDay();
+  document.getElementById('hsub').textContent = WORDLIST.length+' words · '+CLUSTERS.length+' clusters';
+  if(view==='home') return renderHome();
+  if(view==='study') return session?renderCard():renderStudyStart();
+  if(view==='quiz') return renderQuiz();
+  if(view==='clusters') return renderClusters();
+  if(view==='roots') return renderRoots();
+  if(view==='browse') return renderBrowse();
+  if(view==='stats') return renderStats();
+}
+
+function renderHome(){
+  const s=deckStats(WORDLIST);
+  const revLeft=Math.max(0,db.settings.maxReviews-db.day.revDone), newLeft=Math.max(0,db.settings.newPerDay-db.day.newDone);
+  const dueToday=Math.min(s.dueN,revLeft), newToday=Math.min(s.fresh,newLeft);
+  app().innerHTML=`
+  <div class="kpis">
+    <div class="kpi due"><b>${dueToday}</b><span>Due today</span></div>
+    <div class="kpi new"><b>${newToday}</b><span>New today</span></div>
+    <div class="kpi learn"><b>${s.learn}</b><span>Learning</span></div>
+    <div class="kpi"><b>${s.mastered}</b><span>Mastered (ivl≥21d)</span></div>
+    <div class="kpi"><b>${db.streak.count||0}🔥</b><span>Day streak</span></div>
+  </div>
+  <div class="card center">
+    <div style="font-size:15px;color:var(--muted);margin-bottom:12px">${dueToday+newToday>0?('You have <b style="color:var(--ink)">'+(dueToday+newToday)+'</b> cards to study today.'):'🎉 All caught up for today!'}</div>
+    <button class="btn" id="go-study" ${dueToday+newToday>0?'':'disabled'} style="font-size:16px;padding:12px 24px">Start studying</button>
+  </div>
+  <div class="grid tiles" style="margin-top:16px">
+    <div class="tile" data-v="clusters"><div class="t">🧲 Learn by 字群</div><div class="d">Study words in synonym / antonym clusters — the way GRE tests them.</div></div>
+    <div class="tile" data-v="roots"><div class="t">🌱 Learn by 字根字首</div><div class="d">Group words by shared roots & prefixes to learn families at once.</div></div>
+    <div class="tile" data-v="browse"><div class="t">🔎 Browse & search</div><div class="d">Look up any word, see definition, synonyms, antonyms, root.</div></div>
+    <div class="tile" data-v="stats"><div class="t">📊 Stats & settings</div><div class="d">Daily limits, progress, and device sync.</div></div>
+  </div>`;
+  document.getElementById('go-study').onclick=()=>startStudy(WORDLIST,'All words');
+  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>go(t.dataset.v));
+}
+
+function renderStudyStart(){
+  const s=deckStats(WORDLIST);
+  app().innerHTML=`<div class="card center">
+    <h3 style="margin-top:0">Study session</h3>
+    <p class="muted">${s.dueN} due · ${s.fresh} new available · daily limits ${db.settings.newPerDay} new / ${db.settings.maxReviews} reviews</p>
+    <button class="btn" id="s-all">Study all words</button>
+    <div class="muted small" style="margin-top:10px">Or pick a 字群 / 字根 to focus on.</div>
+  </div>`;
+  document.getElementById('s-all').onclick=()=>startStudy(WORDLIST,'All words');
+}
+
+function startStudy(deck, title){
+  // allow studying a focused deck even past daily caps if it's a small targeted set
+  const q=buildQueue(deck);
+  if(!q.length){
+    // focused deck with everything done/limited — offer to cram
+    const fresh=deck.filter(w=>!db.cards[w]);
+    if(fresh.length){ q.push(...fresh.slice(0,Math.max(db.settings.newPerDay,fresh.length)).map(w=>({w,isNew:true}))); }
+  }
+  if(!q.length){ toast('Nothing due in this set right now.'); return; }
+  session={deck, title, queue:q, total:q.length, done:0, again:0, shown:false, introduced:new Set()};
+  view='study'; setTabs(); renderCard();
+}
+
+function renderCard(){
+  if(!session.queue.length){ return renderSessionDone(); }
+  const cur=session.queue[0], w=cur.w, e=WORDS[w]||{word:w};
+  const prog=Math.round(100*session.done/Math.max(1,session.total+session.again));
+  let html=`<div class="study">
+    <div class="practice-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <button class="btn ghost sm" id="end">⤬ End</button>
+      <div class="muted small">${session.title} · ${session.done}/${session.total}${session.again?(' (+'+session.again+' relearn)'):''}</div>
+      <div class="spacer" style="flex:1"></div>
+      <div class="muted small">${cur.isNew?'🆕 new':'🔁 review'}</div>
+    </div>
+    <div class="progress"><i style="width:${prog}%"></i></div>
+    <div class="flash" id="flash">
+      <div class="word">${esc(e.word)} <span class="spk" data-speak="${esc(e.word)}" title="play">🔊</span></div>
+      ${e.pos?`<div class="pos">${esc(e.pos)}.</div>`:''}
+      <div class="freq" title="appears in ${e.freq||'?'} of 5 books">${'★'.repeat(e.freq||0)}${'☆'.repeat(Math.max(0,5-(e.freq||0)))}</div>`;
+  if(!session.shown){
+    html+=`<div class="hint">press Space / tap to reveal</div></div>
+      <div class="reveal"><button id="reveal">Show answer</button></div></div>`;
+  } else {
+    html+=`<div class="back">${backHTML(e)}</div></div>
+      <div class="rate">
+        <button class="again" data-r="again">Again<small>&lt;10m</small></button>
+        <button class="hard" data-r="hard">Hard<small>${ivlPreview(w,'hard')}</small></button>
+        <button class="good" data-r="good">Good<small>${ivlPreview(w,'good')}</small></button>
+        <button class="easy" data-r="easy">Easy<small>${ivlPreview(w,'easy')}</small></button>
+      </div></div>`;
+  }
+  app().innerHTML=html;
+  document.getElementById('end').onclick=endSession;
+  if(!session.shown){ const r=document.getElementById('reveal'); r.onclick=revealCard; document.getElementById('flash').onclick=revealCard; }
+  else { document.querySelectorAll('.rate button').forEach(b=>b.onclick=()=>rateCard(b.dataset.r)); }
+  bindSynLinks(); bindSpeak(app());
+}
+function ivlPreview(w,r){
+  const c=db.cards[w]||{ivl:0,ease:2.5}; let iv;
+  if(r==='hard') iv=c.ivl?Math.max(1,Math.round(c.ivl*1.2)):1;
+  else if(r==='good') iv=c.ivl?Math.round(c.ivl*c.ease):1;
+  else iv=c.ivl?Math.round(c.ivl*c.ease*1.3):4;
+  iv=Math.min(iv,MAX_IVL);
+  return iv>=30?(Math.round(iv/30)+'mo'):(iv+'d');
+}
+function backHTML(e){
+  const chip=(arr,cls)=>(arr||[]).filter(Boolean).map(x=>{
+    const k=String(x).toLowerCase().trim();
+    return `<span class="chip ${cls} link" data-w="${esc(k)}">${esc(x)}</span>`; }).join('');
+  let h=`<div class="def">${esc(e.def||'—')}</div>`;
+  if((e.syn||[]).length) h+=`<div class="row"><span class="lab">同義</span><span class="chips">${chip(e.syn,'syn')}</span></div>`;
+  if((e.ant||[]).length) h+=`<div class="row"><span class="lab">反義</span><span class="chips">${chip(e.ant,'ant')}</span></div>`;
+  if(e.root) h+=`<div class="box"><div class="k">字根 / 助記</div>${esc(e.root)}</div>`;
+  if(e.note) h+=`<div class="box"><div class="k">Note</div>${esc(e.note)}</div>`;
+  const ex=e.example||{};
+  if(ex.en) h+=`<div class="box eg"><div class="k">Example</div>${esc(ex.en)}${ex.zh?`<div class="zh">${esc(ex.zh)}</div>`:''}</div>`;
+  if(e.cluster) h+=`<div style="margin-top:10px"><span class="tag">${esc(e.cluster)}</span></div>`;
+  return h;
+}
+function bindSynLinks(){ document.querySelectorAll('#app .chip.link').forEach(c=>c.onclick=(ev)=>{ ev.stopPropagation(); openDetail(c.dataset.w); }); }
+function revealCard(){ if(db.settings.autoSpeak && session){ const c=session.queue[0]; if(c) speak((WORDS[c.w]||{}).word||c.w); } session.shown=true; renderCard(); }
+function rateCard(r){
+  const cur=session.queue.shift(), w=cur.w;
+  const wasReview=(db.cards[w]&&db.cards[w].state==='review'&&db.cards[w].due<=today());
+  const firstTime=!db.cards[w];
+  grade(w,r);
+  if(r==='again'){ // requeue within session
+    session.again++; const pos=Math.min(session.queue.length, 4); session.queue.splice(pos,0,cur);
+  } else {
+    session.done++;
+    if(cur.isNew && !session.introduced.has(w)){ session.introduced.add(w); db.day.newDone++; }
+    else if(wasReview){ db.day.revDone++; }
+    saveDB();
+  }
+  session.shown=false; renderCard();
+}
+function endSession(){ session=null; view='home'; setTabs(); render(); }
+function renderSessionDone(){
+  app().innerHTML=`<div class="card center"><h3 style="margin-top:0">✅ Session complete</h3>
+    <p class="muted">${session.done} cards reviewed${session.again?(' · '+session.again+' relearns'):''}.</p>
+    <button class="btn" id="more">Back to home</button></div>`;
+  document.getElementById('more').onclick=endSession;
+}
+function renderSessionDoneInline(){ renderSessionDone(); }
+
+/* ---- clusters (字群) ---- */
+function renderClusters(){
+  if(!CLUSTERS.length){ app().innerHTML='<div class="card muted">Clusters are generated from the synonym/antonym graph during content build.</div>'; return; }
+  const cells=CLUSTERS.map((c,i)=>{
+    const st=deckStats(c.words);
+    return `<div class="tile" data-i="${i}"><div class="t">${esc(c.label||('Cluster '+(i+1)))}</div>
+      <div class="d">${c.words.length} words · ${st.dueN} due · ${st.fresh} new</div></div>`;
+  }).join('');
+  app().innerHTML=`<div class="muted small" style="margin-bottom:10px">Each cluster groups near-synonyms and their antonyms — study a whole contrast set at once.</div><div class="grid tiles">${cells}</div>`;
+  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>openGroup(CLUSTERS[+t.dataset.i].label, CLUSTERS[+t.dataset.i].words));
+}
+/* ---- roots (字根) ---- */
+function renderRoots(){
+  if(!ROOTS.length){ app().innerHTML='<div class="card muted">Root families are generated during content build (from each word\'s root key).</div>'; return; }
+  const cells=ROOTS.map((c,i)=>{
+    const st=deckStats(c.words);
+    return `<div class="tile" data-i="${i}"><div class="t">${esc(c.key)}</div>
+      <div class="d">${c.gloss?esc(c.gloss)+' · ':''}${c.words.length} words · ${st.dueN} due</div></div>`;
+  }).join('');
+  app().innerHTML=`<div class="muted small" style="margin-bottom:10px">Words sharing a Latin/Greek root or prefix. Learn the root once, unlock the family.</div><div class="grid tiles">${cells}</div>`;
+  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>openGroup(ROOTS[+t.dataset.i].key, ROOTS[+t.dataset.i].words));
+}
+function openGroup(title, words){
+  app().innerHTML=`<button class="btn ghost sm" id="back">← Back</button>
+    <h3 style="margin:10px 0">${esc(title)} <span class="muted small">(${words.length})</span></h3>
+    <div style="margin-bottom:12px"><button class="btn" id="study-grp">🎴 Study this set</button></div>
+    <div class="list">${words.map(w=>{ const e=WORDS[w]||{}; return `<div class="it" data-w="${esc(w)}"><span class="w">${esc(w)}</span><span class="g">${esc(e.def||'')}</span><span class="tag">${'★'.repeat(e.freq||0)}</span></div>`; }).join('')}</div>`;
+  document.getElementById('back').onclick=()=>go(view);
+  document.getElementById('study-grp').onclick=()=>startStudy(words, title);
+  document.querySelectorAll('.list .it').forEach(it=>it.onclick=()=>openDetail(it.dataset.w));
+}
+
+/* ---- browse / detail ---- */
+let browseQ='';
+function renderBrowse(){
+  app().innerHTML=`<input class="search" id="q" placeholder="Search word or 中文…" value="${esc(browseQ)}">
+    <div id="results" class="list" style="margin-top:12px"></div>`;
+  const q=document.getElementById('q'); q.oninput=()=>{ browseQ=q.value; drawResults(); }; drawResults(); q.focus();
+}
+function drawResults(){
+  const t=browseQ.trim().toLowerCase();
+  let ws=WORDLIST;
+  if(t) ws=WORDLIST.filter(w=>w.includes(t)||((WORDS[w].def||'').toLowerCase().includes(t)));
+  ws=ws.slice(0,300);
+  document.getElementById('results').innerHTML = ws.length?ws.map(w=>{ const e=WORDS[w]; return `<div class="it" data-w="${esc(w)}"><span class="w">${esc(w)}</span><span class="g">${esc(e.def||'')}</span><span class="tag">${'★'.repeat(e.freq||0)}</span></div>`; }).join(''):'<div class="muted" style="padding:14px">No matches.</div>';
+  document.querySelectorAll('#results .it').forEach(it=>it.onclick=()=>openDetail(it.dataset.w));
+}
+let detailStack=[];
+// resolve a referenced word to a known lemma: exact, else strip a derivational/inflectional suffix
+// back to its base (abating->abate, abrogation->abrogate, abetting->abet, happily->happy)
+function resolveWord(w){
+  w=String(w).toLowerCase().trim(); if(LOOK[w]) return w;
+  const T=[], add=b=>{ if(b&&b.length>=3){ T.push(b, b+'e'); } };
+  if(w.endsWith('ies')||w.endsWith('ied')) add(w.slice(0,-3)+'y');
+  if(w.endsWith('ization')||w.endsWith('isation')){ const b=w.slice(0,-7); add(b+'ize'); add(b+'ise'); add(b); }
+  if(w.endsWith('ation')){ const b=w.slice(0,-5); add(b+'ate'); add(b); }
+  if(w.endsWith('osity')) add(w.slice(0,-5)+'ous');   // impetuosity->impetuous
+  if(w.endsWith('ancy')) add(w.slice(0,-4)+'ant');    // dormancy->dormant
+  if(w.endsWith('ency')) add(w.slice(0,-4)+'ent');    // latency->latent
+  const suf=['ements','ement','encies','ency','ences','ence','ances','ance','ants','ant','ents','ent',
+    'ously','ousness','ous','ively','iveness','ive','fully','ful','less','ability','ibility','able','ible',
+    'ibly','ably','ically','ical','ally','isms','ism','ists','ist','izes','ize','ises','ise','izing','ising',
+    'ments','ment','ness','ities','ity','ions','ion','ed','ing','ly','ers','er','ors','or','es','s','al','y'];
+  for(const s of suf){ if(w.length>s.length+2&&w.endsWith(s)) add(w.slice(0,-s.length)); }
+  for(const s of ['ing','ed','er','ant','ent','y']){ if(w.endsWith(s)){ const b=w.slice(0,-s.length); if(/(.)\1$/.test(b)) add(b.slice(0,-1)); } }  // abetting->abet
+  for(const t of T){ if(LOOK[t]) return t; }
+  return w;
+}
+function openDetail(w){ detailStack=[]; renderDetail(w); }   // fresh entry (from lists / cards)
+function renderDetail(w){
+  w=resolveWord(w);
+  const e=LOOK[w], inDeck=!!WORDS[w], c=db.cards[w], word=(e&&e.word)||w;
+  const sched = inDeck
+    ? (c?`<span class="tag">${c.state}</span> <span class="muted small">due ${c.due-today()<=0?'now':('in '+(c.due-today())+'d')} · ivl ${c.ivl}d</span>`:'<span class="muted small">not yet studied</span>')
+    : '<span class="tag">reference</span> <span class="muted small">(not in the study deck)</span>';
+  const body = e ? backHTML(e) : '<div class="muted">No further detail for this word yet.</div>';
+  const back = detailStack.length ? '<button class="btn ghost sm" id="dback">← Back</button> ' : '';
+  showDlgHTML(`<h3 style="margin:0 0 2px">${esc(word)} <span class="spk" data-speak="${esc(word)}" title="play">🔊</span> <span class="muted" style="font-size:14px;font-style:italic">${esc((e&&e.pos)||'')}</span> ${e&&e.freq?`<span class="freq">${'★'.repeat(e.freq)}</span>`:''}</h3>
+    <div style="margin:8px 0">${sched}</div>
+    <div class="back">${body}</div>
+    <div class="acts">${back}<button class="btn ghost sm" id="dx">Close</button></div>`);
+  document.getElementById('dx').onclick=()=>{ detailStack=[]; closeDlg(); };
+  const bb=document.getElementById('dback'); if(bb) bb.onclick=()=>renderDetail(detailStack.pop());
+  document.querySelectorAll('.dlg .chip.link').forEach(ch=>ch.onclick=(ev)=>{ ev.stopPropagation(); detailStack.push(word); renderDetail(ch.dataset.w); });
+  bindSpeak(document.querySelector('.dlg'));
+  if(db.settings.autoSpeak) speak(word);
+}
+
+/* ---- stats / settings ---- */
+function renderStats(){
+  const s=deckStats(WORDLIST);
+  const studied=WORDLIST.filter(w=>db.cards[w]).length;
+  app().innerHTML=`
+  <div class="kpis">
+    <div class="kpi"><b>${studied}</b><span>Cards started</span></div>
+    <div class="kpi"><b>${s.mastered}</b><span>Mastered</span></div>
+    <div class="kpi"><b>${s.learn}</b><span>Learning</span></div>
+    <div class="kpi"><b>${db.streak.count||0}</b><span>Day streak</span></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Daily limits</h3>
+    <div class="row"><label class="muted">New cards / day </label>
+      <input class="search" id="npd" type="number" min="0" style="width:100px;display:inline-block" value="${db.settings.newPerDay}"></div>
+    <div class="row"><label class="muted">Max reviews / day </label>
+      <input class="search" id="mrd" type="number" min="0" style="width:100px;display:inline-block" value="${db.settings.maxReviews}"></div>
+    <div class="row"><label class="muted" style="cursor:pointer"><input type="checkbox" id="aspk" ${db.settings.autoSpeak?'checked':''}> Auto-pronounce words 🔊</label></div>
+    <button class="btn sm" id="save-set">Save</button>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin-top:0">☁️ Cloud sync (all devices, incl. iPhone)</h3>
+    <div id="sync-panel"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin-top:0">Backup</h3>
+    <button class="btn ghost sm" id="exp">Export progress</button>
+    <button class="btn ghost sm" id="imp">Restore progress</button>
+    <input type="file" id="impf" accept="application/json" style="display:none">
+    <button class="btn ghost sm" id="reset" style="float:right;color:var(--bad)">Reset all progress</button>
+    <div class="muted small" style="margin-top:10px;clear:both">${storageWorks()?'💾 Progress is saved automatically on this device (browser storage).':'⚠️ This browser is NOT saving progress — add to Home Screen / open from a fixed location, or Export to back up.'}</div>
+  </div>`;
+  document.getElementById('save-set').onclick=()=>{ db.settings.newPerDay=Math.max(0,+document.getElementById('npd').value||0);
+    db.settings.maxReviews=Math.max(0,+document.getElementById('mrd').value||0); db.settings.autoSpeak=document.getElementById('aspk').checked; saveDB(); toast('Saved'); };
+  document.getElementById('exp').onclick=exportDB;
+  document.getElementById('imp').onclick=()=>document.getElementById('impf').click();
+  document.getElementById('impf').onchange=importDB;
+  document.getElementById('reset').onclick=()=>showDlg('Reset all progress?','This clears your study history on this device (content stays).',[
+    {label:'Cancel'},{label:'Reset',primary:true,danger:true,onClick:()=>{ db=freshDB(); saveDB(); go('home'); }}]);
+  renderSyncPanel();
+}
+function exportDB(){ const blob=new Blob([JSON.stringify(db)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gre-vocab-progress.json'; a.click(); }
+function importDB(e){ const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ db=normalizeDB(JSON.parse(r.result)); saveDB(); toast('Restored'); render(); }catch(x){ toast('Invalid file'); } };
+  r.readAsText(f,'utf-8'); e.target.value=''; }
+
+/* ============ quiz ============ */
+let quiz=null;
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function pickN(arr,n,excl){ const p=shuffle(arr.filter(x=>!excl||!excl.has(x))); return p.slice(0,n); }
+function clusterMates(w){ const e=WORDS[w]; if(!e||!e.cluster) return []; const c=CLUSTERS.find(c=>c.label===e.cluster); return c?c.words.filter(x=>x!==w&&WORDS[x]):[]; }
+function optsFrom(correct, vals){ const out=[correct], seen=new Set([correct]); for(const v of vals){ if(out.length>=4) break; if(v&&!seen.has(v)){ out.push(v); seen.add(v); } } return out.length>=2?shuffle(out):null; }
+function makeQ(w){
+  const e=WORDS[w]; const types=['def','word']; if((e.syn||[]).length) types.push('syn');
+  const t=types[Math.floor(Math.random()*types.length)];
+  const matesHave = clusterMates(w);
+  const poolW = (matesHave.length>=3?matesHave:WORDLIST);
+  if(t==='word'){
+    const opts=optsFrom(e.word, pickN(poolW,8,new Set([w])).map(x=>WORDS[x].word));
+    return opts&&{type:t, prompt:`Which word means: <span class="muted">${esc(e.def)}</span>`, opts, answer:e.word, w};
+  }
+  if(t==='syn'){
+    const syn=(e.syn||[])[Math.floor(Math.random()*Math.min(3,(e.syn||[]).length))];
+    const notSyn=new Set([w,...(e.syn||[]).map(s=>String(s).toLowerCase())]);
+    const opts=optsFrom(syn, pickN(WORDLIST,8,notSyn).map(x=>WORDS[x].word));
+    return opts&&{type:t, prompt:`Pick a synonym of <b>${esc(e.word)}</b>`, speak:e.word, opts, answer:syn, w};
+  }
+  const opts=optsFrom(e.def, pickN(poolW,8,new Set([w])).map(x=>WORDS[x].def).filter(Boolean));
+  return opts&&{type:'def', prompt:`What does <b>${esc(e.word)}</b> mean?`, speak:e.word, opts, answer:e.def, w};
+}
+function renderQuiz(){
+  if(quiz) return renderQuizQ();
+  const studied=WORDLIST.filter(w=>db.cards[w]).length;
+  app().innerHTML=`<div class="card center">
+    <h3 style="margin-top:0">📝 Quiz</h3>
+    <p class="muted">Multiple-choice test on meanings & synonyms. Wrong answers are added to your review pile.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      <button class="btn" id="q-studied" ${studied<4?'disabled':''}>Quiz 20 · studied${studied?(' ('+studied+')'):''}</button>
+      <button class="btn ghost" id="q-all">Quiz 20 · all words</button>
+    </div>
+    ${studied<4?'<div class="muted small" style="margin-top:10px">Study a few cards first to quiz on them, or quiz on all words.</div>':''}
+  </div>`;
+  document.getElementById('q-all').onclick=()=>startQuiz(WORDLIST,20);
+  const qs=document.getElementById('q-studied'); if(qs&&studied>=4) qs.onclick=()=>startQuiz(WORDLIST.filter(w=>db.cards[w]),20);
+}
+function startQuiz(deck,n){
+  const ws=pickN(deck.filter(w=>WORDS[w]&&WORDS[w].def),n);
+  const qs=ws.map(makeQ).filter(Boolean);
+  if(qs.length<3){ toast('Not enough words to quiz yet.'); return; }
+  quiz={qs, idx:0, score:0, wrong:[], answered:false};
+  view='quiz'; setTabs(); renderQuizQ();
+}
+function renderQuizQ(){
+  if(quiz.idx>=quiz.qs.length) return renderQuizDone();
+  const q=quiz.qs[quiz.idx];
+  app().innerHTML=`<div class="study quiz">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <button class="btn ghost sm" id="qend">⤬ End</button>
+      <div class="muted small">${quiz.idx+1}/${quiz.qs.length} · score ${quiz.score}</div>
+    </div>
+    <div class="progress"><i style="width:${Math.round(100*quiz.idx/quiz.qs.length)}%"></i></div>
+    <div class="card"><div style="font-size:18px">${q.prompt} ${q.speak?`<span class="spk" data-speak="${esc(q.speak)}">🔊</span>`:''}</div></div>
+    <div id="qopts">${q.opts.map((o,i)=>`<button class="opt" data-i="${i}">${esc(o)}</button>`).join('')}</div>
+  </div>`;
+  document.getElementById('qend').onclick=()=>{ quiz=null; go('home'); };
+  document.querySelectorAll('#qopts .opt').forEach(b=>b.onclick=()=>answerQuiz(b,q));
+  bindSpeak(app());
+  if(db.settings.autoSpeak && q.speak) speak(q.speak);
+}
+function answerQuiz(btn,q){
+  if(quiz.answered) return; quiz.answered=true;
+  const chosen=q.opts[+btn.dataset.i], correct=(chosen===q.answer);
+  document.querySelectorAll('#qopts .opt').forEach(b=>{ b.disabled=true;
+    if(q.opts[+b.dataset.i]===q.answer) b.classList.add('correct');
+    else if(b===btn) b.classList.add('wrong'); });
+  if(correct) quiz.score++; else { quiz.wrong.push(q); grade(q.w,'again'); }
+  const nx=document.createElement('button'); nx.className='btn'; nx.style.marginTop='12px';
+  nx.textContent=(quiz.idx+1<quiz.qs.length?'Next →':'See results');
+  nx.onclick=()=>{ quiz.idx++; quiz.answered=false; renderQuizQ(); };
+  document.getElementById('qopts').appendChild(nx);
+}
+function renderQuizDone(){
+  const wrong=quiz.wrong, n=quiz.qs.length, pct=quiz.score/n;
+  app().innerHTML=`<div class="card center">
+    <h3 style="margin-top:0">📝 Quiz complete</h3>
+    <div style="font-size:32px;font-weight:800;color:${pct>=0.7?'var(--good)':'var(--warn)'}">${quiz.score}/${n}</div>
+    <p class="muted">${wrong.length?(wrong.length+' word(s) added to your review pile:'):'Perfect score! 🎉'}</p>
+    <div class="list" style="text-align:left;max-width:520px;margin:0 auto">${wrong.map(q=>`<div class="it" data-w="${esc(q.w)}"><span class="w">${esc(WORDS[q.w].word)}</span><span class="g">${esc(WORDS[q.w].def||'')}</span></div>`).join('')}</div>
+    <div style="margin-top:14px"><button class="btn" id="qhome">Done</button></div>
+  </div>`;
+  document.querySelectorAll('.list .it').forEach(it=>it.onclick=()=>openDetail(it.dataset.w));
+  document.getElementById('qhome').onclick=()=>{ quiz=null; go('home'); };
+}
+
+/* ============ dialog + toast ============ */
+function showDlg(title,msg,acts){
+  const r=document.getElementById('dlg-root');
+  r.innerHTML=`<div class="dlg-back"><div class="dlg"><h3>${esc(title)}</h3><p>${msg}</p>
+    <div class="acts">${acts.map((a,i)=>`<button class="btn ${a.primary?'':'ghost'} sm" data-i="${i}" ${a.danger?'style="background:var(--bad)"':''}>${esc(a.label)}</button>`).join('')}</div></div></div>`;
+  r.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const a=acts[+b.dataset.i]; closeDlg(); if(a.onClick) a.onClick(); });
+}
+function showDlgHTML(html){ document.getElementById('dlg-root').innerHTML=`<div class="dlg-back"><div class="dlg" style="max-width:520px">${html}</div></div>`;
+  document.querySelector('.dlg-back').onclick=(e)=>{ if(e.target.classList.contains('dlg-back')) closeDlg(); }; }
+function closeDlg(){ document.getElementById('dlg-root').innerHTML=''; }
+let toastT=null;
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),1600); }
+
+/* ============ keyboard ============ */
+document.addEventListener('keydown',(e)=>{
+  if(view!=='study'||!session) return;
+  if(document.querySelector('.dlg-back')) return;
+  if(!session.shown){ if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); revealCard(); } }
+  else { const map={Digit1:'again',Digit2:'hard',Digit3:'good',Digit4:'easy',Space:'good',Enter:'good'};
+    if(map[e.code]){ e.preventDefault(); rateCard(map[e.code]); } }
+});
+
+/* ============ sync (File System Access API + Dropbox) ============ */
+const SYNC_SUPPORTED = typeof window.showSaveFilePicker==='function' && typeof window.showOpenFilePicker==='function';
+let syncHandle=null, pendingSyncHandle=null, syncTimer=null, syncBusy=false;
+function idbHandle(method, val){ return new Promise(res=>{
+  let req; try{ req=indexedDB.open('greVocabSync',1); }catch(e){ return res(null); }
+  req.onupgradeneeded=()=>{ try{ req.result.createObjectStore('h'); }catch(e){} };
+  req.onsuccess=()=>{ try{ const st=req.result.transaction('h', method==='get'?'readonly':'readwrite').objectStore('h');
+    const op=method==='get'?st.get('handle'):method==='del'?st.delete('handle'):st.put(val,'handle');
+    op.onsuccess=()=>res(method==='get'?(op.result||null):true); op.onerror=()=>res(null); }catch(e){ res(null); } };
+  req.onerror=()=>res(null); }); }
+async function syncReadRemote(){ try{ const f=await syncHandle.getFile(); const t=await f.text(); return t?JSON.parse(t):null; }catch(e){ return null; } }
+async function syncFlush(rerender){
+  if(!syncHandle||syncBusy) return false; clearTimeout(syncTimer); syncBusy=true;
+  try{ const remote=normalizeDB(await syncReadRemote()); if(remote) db=mergeDB(db,remote);
+    db._syncTs=Date.now(); try{ localStorage.setItem(LS_KEY,JSON.stringify(db)); }catch(e){}
+    const w=await syncHandle.createWritable(); await w.write(JSON.stringify(db)); await w.close();
+    if(rerender){ if(view==='home') render(); renderSyncPanel(); } return true;
+  }catch(e){ console.warn('sync flush failed',e); return false; } finally{ syncBusy=false; }
+}
+function scheduleSyncWrite(){ if(!syncHandle) return; clearTimeout(syncTimer); syncTimer=setTimeout(()=>syncFlush(false),1500); }
+// lossless merge of card-level study data
+function mergeDB(a,b){
+  if(!b) return a; const out=JSON.parse(JSON.stringify(a)); out.cards=out.cards||{};
+  Object.keys(b.cards||{}).forEach(w=>{ const lo=out.cards[w], ro=b.cards[w];
+    if(!lo){ out.cards[w]=ro; } else { out.cards[w]=((ro.last||0)>(lo.last||0))?ro:lo;
+      // keep the strongest scheduling so progress never regresses
+      out.cards[w].reps=Math.max(lo.reps||0,ro.reps||0); out.cards[w].lapses=Math.max(lo.lapses||0,ro.lapses||0); } });
+  // day counters: same day -> max; settings: newer wins
+  if((b.day&&b.day.d)===(out.day&&out.day.d)){ out.day.newDone=Math.max(out.day.newDone||0,(b.day.newDone||0)); out.day.revDone=Math.max(out.day.revDone||0,(b.day.revDone||0)); }
+  else if((b.day&&b.day.d||0)>(out.day&&out.day.d||0)) out.day=b.day;
+  if((b._syncTs||0)>(out._syncTs||0)) out.settings=Object.assign(out.settings,b.settings);
+  if((b.streak&&b.streak.last||0)>(out.streak&&out.streak.last||0)) out.streak=b.streak;
+  return normalizeDB(out);
+}
+async function connectSync(mode){
+  if(!SYNC_SUPPORTED){ showDlg('Sync not supported','Use Chrome or Edge (opened via the local server), or use Export/Restore instead.',[{label:'OK',primary:true}]); return; }
+  try{ let h; if(mode==='open'){ const arr=await window.showOpenFilePicker({types:[{description:'JSON',accept:{'application/json':['.json']}}]}); h=arr[0]; }
+    else { h=await window.showSaveFilePicker({suggestedName:'gre-vocab-sync.json',types:[{description:'JSON',accept:{'application/json':['.json']}}]}); }
+    syncHandle=h; pendingSyncHandle=null; await idbHandle('put',h); await syncFlush(true);
+    showDlg('Sync connected','This device now syncs to that file. Keep it in your Dropbox folder. On another laptop, use “Connect to existing sync file” and pick the same file.',[{label:'OK',primary:true}]);
+  }catch(e){ if(e&&e.name==='AbortError') return; showDlg('Sync error',esc(String(e&&e.message||e)),[{label:'OK',primary:true}]); }
+}
+async function reconnectSync(){ const h=pendingSyncHandle||await idbHandle('get'); if(!h) return;
+  try{ const p=await h.requestPermission({mode:'readwrite'}); if(p!=='granted'){ showDlg('Permission needed','Please allow read/write access to the sync file.',[{label:'OK',primary:true}]); return; }
+    syncHandle=h; pendingSyncHandle=null; await syncFlush(true); }catch(e){ console.warn(e); } }
+function disconnectSync(){ syncHandle=null; pendingSyncHandle=null; idbHandle('del'); renderSyncPanel(); }
+async function syncOnStartup(){ if(!SYNC_SUPPORTED) return; const h=await idbHandle('get'); if(!h) return;
+  try{ const perm=await h.queryPermission({mode:'readwrite'}); if(perm==='granted'){ syncHandle=h; await syncFlush(true); } else { pendingSyncHandle=h; renderSyncPanel(); } }
+  catch(e){ pendingSyncHandle=h; renderSyncPanel(); } }
+window.addEventListener('focus',()=>{ if(syncHandle) syncFlush(true); });
+window.addEventListener('online',()=>{ if(syncHandle) syncFlush(true); });
+/* ============ cloud sync — Firebase Firestore (works on every device incl. iPhone) ============
+   A user-chosen "sync code" is the shared document key. Same code on two devices = synced.
+   The Firebase SDK is lazy-loaded only when syncing, so the app stays fully offline otherwise. */
+const FB_CFG = window.FIREBASE_CONFIG || null;
+function fbConfigured(){ return !!(FB_CFG && FB_CFG.apiKey); }
+let cloudCode = (()=>{ try{ return localStorage.getItem('gre_vocab_synccode')||''; }catch(e){ return ''; } })();
+let cloudRef=null, cloudInited=false, cloudBusy=false, cloudUnsub=null, cloudTimer=null, cloudApplying=false, _fbLoading=null;
+function loadFirebase(){
+  if(typeof firebase!=='undefined' && firebase.firestore) return Promise.resolve(true);
+  if(_fbLoading) return _fbLoading;
+  _fbLoading=new Promise(res=>{
+    const urls=['https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+                'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js'];
+    let i=0; const next=()=>{ if(i>=urls.length){ res(typeof firebase!=='undefined'); return; }
+      const s=document.createElement('script'); s.src=urls[i++]; s.onload=next; s.onerror=()=>res(false); document.head.appendChild(s); };
+    next();
+  });
+  return _fbLoading;
+}
+function persistLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(db)); }catch(e){} }
+async function cloudConnect(code, silent){
+  code=String(code||'').trim();
+  if(!fbConfigured()){ if(!silent) showDlg('Cloud sync not set up yet','This copy has no Firebase config. Host it on GitHub Pages and fill in firebase-config.js (see SETUP-sync.md), or use Export/Restore to move progress manually.',[{label:'OK',primary:true}]); renderSyncPanel(); return; }
+  if(code.length<4){ if(!silent) toast('Use a longer sync code'); return; }
+  const ok=await loadFirebase();
+  if(!ok){ if(!silent) toast('Need internet to start sync'); renderSyncPanel(); return; }
+  try{
+    if(!cloudInited){ firebase.initializeApp(FB_CFG); cloudInited=true; }
+    cloudCode=code; try{ localStorage.setItem('gre_vocab_synccode',code); }catch(e){}
+    cloudRef=firebase.firestore().collection('vocab_sync').doc(code);
+    await cloudPull(); await cloudPush(true);
+    if(cloudUnsub) cloudUnsub();
+    cloudUnsub=cloudRef.onSnapshot(snap=>{ if(cloudApplying||!snap.exists) return; const d=snap.data();
+      if(d&&d.db){ try{ cloudApplying=true; db=mergeDB(db, normalizeDB(JSON.parse(d.db))); persistLocal(); if(view==='home'||view==='stats') render(); }catch(e){} finally{ cloudApplying=false; } } });
+    renderSyncPanel(); if(!silent) toast('Cloud sync on');
+  }catch(e){ console.warn('cloud connect',e); if(!silent) showDlg('Cloud sync error', esc(String(e&&e.message||e)), [{label:'OK',primary:true}]); renderSyncPanel(); }
+}
+async function cloudPull(){ if(!cloudRef) return; try{ const snap=await cloudRef.get(); const d=snap.data(); if(d&&d.db){ db=mergeDB(db, normalizeDB(JSON.parse(d.db))); persistLocal(); } }catch(e){ console.warn('cloud pull',e); } }
+async function cloudPush(force){ if(!cloudRef||cloudBusy) return; cloudBusy=true; clearTimeout(cloudTimer);
+  try{ await cloudPull(); db._syncTs=Date.now(); persistLocal(); await cloudRef.set({db:JSON.stringify(db), ts:Date.now()}); }
+  catch(e){ console.warn('cloud push',e); } finally{ cloudBusy=false; } }
+function scheduleCloudWrite(){ if(!cloudRef||cloudApplying) return; clearTimeout(cloudTimer); cloudTimer=setTimeout(()=>cloudPush(), 1500); }
+function cloudDisconnect(){ if(cloudUnsub){ try{cloudUnsub();}catch(e){} cloudUnsub=null; } cloudRef=null; cloudCode=''; try{ localStorage.removeItem('gre_vocab_synccode'); }catch(e){} renderSyncPanel(); }
+async function cloudOnStartup(){ if(fbConfigured() && cloudCode) await cloudConnect(cloudCode, true); else renderSyncPanel(); }
+window.addEventListener('online',()=>{ if(cloudRef) cloudPush(); });
+window.addEventListener('focus',()=>{ if(cloudRef) cloudPull().then(()=>{ if(view==='home'||view==='stats') render(); }); });
+function renderSyncPanel(){
+  const el=document.getElementById('sync-panel'); if(!el) return;
+  if(!fbConfigured()){
+    el.innerHTML='<div class="muted small">☁️ Cloud sync isn\'t configured for this copy yet.<br>Host the app on <b>GitHub Pages</b> and fill in <b>firebase-config.js</b> (steps in <b>SETUP-sync.md</b>) to sync phone ↔ laptop automatically. Until then, use <b>Export / Restore</b> below to move progress.</div>';
+    return;
+  }
+  if(cloudRef){
+    el.innerHTML='<div><span style="color:var(--good);font-weight:600">☁️ Cloud sync: ON</span> &nbsp;<span class="muted small">code: <b>'+esc(cloudCode)+'</b></span></div>'+
+      '<div style="margin-top:8px"><button class="btn ghost sm" id="cn">Sync now</button> <button class="btn ghost sm" id="cd">Disconnect</button></div>'+
+      '<div class="muted small" style="margin-top:6px">Enter the <b>same code</b> on your other devices and they sync automatically.</div>';
+    document.getElementById('cn').onclick=async()=>{ await cloudPush(true); toast('Synced'); };
+    document.getElementById('cd').onclick=cloudDisconnect;
+  } else {
+    el.innerHTML='<div class="muted small" style="margin-bottom:6px">Pick a <b>sync code</b> (any phrase). Enter the <b>same code</b> on every device — phone, iPad, laptop — to sync progress automatically.</div>'+
+      '<input class="search" id="cc" placeholder="e.g. ronan-gre-2026" style="max-width:240px;display:inline-block"> <button class="btn sm" id="cgo">Connect</button>';
+    document.getElementById('cgo').onclick=()=>cloudConnect(document.getElementById('cc').value);
+    const cc=document.getElementById('cc'); if(cc) cc.onkeydown=(e)=>{ if(e.key==='Enter') cloudConnect(cc.value); };
+  }
+}
+
+/* ============ boot ============ */
+setTabs(); render(); cloudOnStartup();
+if(!storageWorks()) showDlg('⚠️ Progress won\'t be saved',
+  'This browser can\'t store data right now — usually private/incognito mode, or the page was opened from a temporary location. Your study progress would be lost on close.<br><br><b>Fix:</b> add this page to your Home Screen, or open it from a fixed location (e.g. the Files app), then progress saves automatically. You can also use <b>Export</b> in Stats to back up.',
+  [{label:'OK',primary:true}]);
+</script>
+</body>
+</html>
