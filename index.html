@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GRE Vocab Trainer</title>
-<script src="vocab_full.js"></script>
-<script src="vocab_ref.js"></script>
+<script src="data/vocab_full.js"></script>
+<script src="data/vocab_ref.js"></script>
 <script src="firebase-config.js"></script>
 <style>
 :root{
@@ -511,24 +511,40 @@ let quiz=null;
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function pickN(arr,n,excl){ const p=shuffle(arr.filter(x=>!excl||!excl.has(x))); return p.slice(0,n); }
 function clusterMates(w){ const e=WORDS[w]; if(!e||!e.cluster) return []; const c=CLUSTERS.find(c=>c.label===e.cluster); return c?c.words.filter(x=>x!==w&&WORDS[x]):[]; }
-function optsFrom(correct, vals){ const out=[correct], seen=new Set([correct]); for(const v of vals){ if(out.length>=4) break; if(v&&!seen.has(v)){ out.push(v); seen.add(v); } } return out.length>=2?shuffle(out):null; }
+// Two words count as "the same answer" if either lists the other as a synonym, or they share a
+// meaning cluster. Used both to KEEP such words out of the distractors and to ACCEPT any of them
+// if picked — so the quiz never has a hidden second-correct option that's marked wrong.
+function synonymish(a,b){
+  if(a===b) return true;
+  const ea=WORDS[a], eb=WORDS[b]; if(!ea||!eb) return false;
+  if((ea.syn||[]).some(s=>String(s).toLowerCase()===b)) return true;
+  if((eb.syn||[]).some(s=>String(s).toLowerCase()===a)) return true;
+  return !!(ea.cluster && ea.cluster===eb.cluster);
+}
+const _cjkRe=/[㐀-鿿]/g;
+function defGrams(s){ const g=new Set(); const j=(String(s||'').match(_cjkRe)||[]).join(''); for(let i=0;i<j.length-1;i++) g.add(j.slice(i,i+2)); return g; }
+// candidate distractors for w: unrelated in meaning AND whose 中文 gloss doesn't overlap w's
+function unrelatedPool(w){
+  const e=WORDS[w], ag=defGrams(e.def);
+  const rel=new Set([w, ...(e.syn||[]).map(s=>String(s).toLowerCase()), ...(e.ant||[]).map(s=>String(s).toLowerCase()), ...clusterMates(w)]);
+  const overlaps=d=>{ for(const x of defGrams(d)) if(ag.has(x)) return true; return false; };
+  return WORDLIST.filter(x=> x!==w && WORDS[x] && WORDS[x].def && !rel.has(x) && !synonymish(w,x) && !overlaps(WORDS[x].def));
+}
 function makeQ(w){
-  const e=WORDS[w]; const types=['def','word']; if((e.syn||[]).length) types.push('syn');
+  const e=WORDS[w]; if(!e||!e.def) return null;
+  const syns=(e.syn||[]).map(s=>String(s).toLowerCase()).filter(s=>s!==w&&WORDS[s]);
+  const types=['def','word']; if(syns.length) types.push('syn');
   const t=types[Math.floor(Math.random()*types.length)];
-  const matesHave = clusterMates(w);
-  const poolW = (matesHave.length>=3?matesHave:WORDLIST);
-  if(t==='word'){
-    const opts=optsFrom(e.word, pickN(poolW,8,new Set([w])).map(x=>WORDS[x].word));
-    return opts&&{type:t, prompt:`Which word means: <span class="muted">${esc(e.def)}</span>`, opts, answer:e.word, w};
-  }
-  if(t==='syn'){
-    const syn=(e.syn||[])[Math.floor(Math.random()*Math.min(3,(e.syn||[]).length))];
-    const notSyn=new Set([w,...(e.syn||[]).map(s=>String(s).toLowerCase())]);
-    const opts=optsFrom(syn, pickN(WORDLIST,8,notSyn).map(x=>WORDS[x].word));
-    return opts&&{type:t, prompt:`Pick a synonym of <b>${esc(e.word)}</b>`, speak:e.word, opts, answer:syn, w};
-  }
-  const opts=optsFrom(e.def, pickN(poolW,8,new Set([w])).map(x=>WORDS[x].def).filter(Boolean));
-  return opts&&{type:'def', prompt:`What does <b>${esc(e.word)}</b> mean?`, speak:e.word, opts, answer:e.def, w};
+  const disp = x => (t==='def') ? WORDS[x].def : WORDS[x].word;
+  const answerWord = (t==='syn') ? syns[Math.floor(Math.random()*syns.length)] : w;
+  const words=[answerWord], seen=new Set([disp(answerWord)]);
+  for(const c of shuffle(unrelatedPool(w))){ if(words.length>=4) break; const d=disp(c); if(d&&!seen.has(d)){ words.push(c); seen.add(d); } }
+  if(words.length<4) return null;                        // not enough clean distractors (very rare)
+  const order=shuffle(words);
+  const base={type:t, w, opts:order.map(disp), correct:order.map(x=>synonymish(w,x))};  // accept ANY correct option
+  if(t==='word') return {...base, prompt:`Which word means: <span class="muted">${esc(e.def)}</span>`};
+  if(t==='syn')  return {...base, prompt:`Pick a synonym of <b>${esc(e.word)}</b>`, speak:e.word};
+  return {...base, prompt:`What does <b>${esc(e.word)}</b> mean?`, speak:e.word};
 }
 function renderQuiz(){
   if(quiz) return renderQuizQ();
@@ -571,11 +587,11 @@ function renderQuizQ(){
 }
 function answerQuiz(btn,q){
   if(quiz.answered) return; quiz.answered=true;
-  const chosen=q.opts[+btn.dataset.i], correct=(chosen===q.answer);
-  document.querySelectorAll('#qopts .opt').forEach(b=>{ b.disabled=true;
-    if(q.opts[+b.dataset.i]===q.answer) b.classList.add('correct');
+  const isCorrect=!!q.correct[+btn.dataset.i];
+  document.querySelectorAll('#qopts .opt').forEach(b=>{ const j=+b.dataset.i; b.disabled=true;
+    if(q.correct[j]) b.classList.add('correct');        // highlight EVERY correct option
     else if(b===btn) b.classList.add('wrong'); });
-  if(correct) quiz.score++; else { quiz.wrong.push(q); grade(q.w,'again'); }
+  if(isCorrect) quiz.score++; else { quiz.wrong.push(q); grade(q.w,'again'); }
   const nx=document.createElement('button'); nx.className='btn'; nx.style.marginTop='12px';
   nx.textContent=(quiz.idx+1<quiz.qs.length?'Next →':'See results');
   nx.onclick=()=>{ quiz.idx++; quiz.answered=false; renderQuizQ(); };
